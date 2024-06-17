@@ -25,14 +25,19 @@
             <label>Color:
                 <input type="color" id="font-color" value="#000000">
             </label>
+            <button onclick="undo()">Undo</button>
+            <button onclick="redo()">Redo</button>
             <button onclick="saveDesign()">Save Design</button>
         </div>
         <div class="product-preview" id="product-preview"></div>
+        <div class="layers-panel" id="layers-panel"></div>
     </main>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/6.1.1/pica.min.js"></script>
     <script>
         let currentImage = '';
         let currentRotation = 0;
+        let history = [];
+        let historyIndex = -1;
 
         window.addEventListener('message', function(event) {
             if (event.data.action === 'loadProduct') {
@@ -43,6 +48,7 @@
         function loadProduct(product) {
             const previewArea = document.getElementById('product-preview');
             previewArea.style.backgroundImage = `url(${product.src})`;
+            saveState();
         }
 
         function uploadImage() {
@@ -101,7 +107,10 @@
 
             makeElementDraggable(imgElement);
             addResizeHandles(imgElement);
+            addDeleteButton(imgElement);
             previewArea.appendChild(imgElement);
+            addLayer('Image');
+            saveState();
         }
 
         function addText() {
@@ -125,7 +134,11 @@
             textElement.style.whiteSpace = 'nowrap';
 
             makeElementDraggable(textElement);
+            addResizeHandles(textElement);
+            addDeleteButton(textElement);
             previewArea.appendChild(textElement);
+            addLayer('Text');
+            saveState();
         }
 
         function makeElementDraggable(element) {
@@ -149,6 +162,7 @@
                 element.onmouseup = function() {
                     document.removeEventListener('mousemove', onMouseMove);
                     element.onmouseup = null;
+                    saveState();
                 };
 
                 element.ondragstart = function() {
@@ -187,10 +201,70 @@
             function resizeMouseUp() {
                 document.removeEventListener('mousemove', resizeMouseMove);
                 document.removeEventListener('mouseup', resizeMouseUp);
+                saveState();
             }
 
             document.addEventListener('mousemove', resizeMouseMove);
             document.addEventListener('mouseup', resizeMouseUp);
+        }
+
+        function addDeleteButton(element) {
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '✖';
+            deleteButton.className = 'delete-button';
+            deleteButton.style.position = 'absolute';
+            deleteButton.style.top = '-10px';
+            deleteButton.style.right = '-10px';
+            deleteButton.style.backgroundColor = 'red';
+            deleteButton.style.color = 'white';
+            deleteButton.style.border = 'none';
+            deleteButton.style.borderRadius = '50%';
+            deleteButton.style.cursor = 'pointer';
+            deleteButton.onclick = function() {
+                element.parentElement.removeChild(element);
+                saveState();
+            };
+            element.appendChild(deleteButton);
+        }
+
+        function saveState() {
+            const previewArea = document.getElementById('product-preview');
+            history = history.slice(0, historyIndex + 1);
+            history.push(previewArea.innerHTML);
+            historyIndex++;
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreState();
+            }
+        }
+
+        function restoreState() {
+            const previewArea = document.getElementById('product-preview');
+            previewArea.innerHTML = history[historyIndex];
+            const elements = previewArea.querySelectorAll('.custom-element');
+            elements.forEach(element => {
+                makeElementDraggable(element);
+                addResizeHandles(element);
+                addDeleteButton(element);
+            });
+        }
+
+        function addLayer(type) {
+            const layersPanel = document.getElementById('layers-panel');
+            const layer = document.createElement('div');
+            layer.className = 'layer';
+            layer.textContent = `${type} Layer`;
+            layersPanel.appendChild(layer);
         }
 
         function saveDesign() {
