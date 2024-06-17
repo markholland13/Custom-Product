@@ -1,4 +1,3 @@
-// Handle iframe navigation
 window.addEventListener('message', function(event) {
     if (event.data.action === 'navigate') {
         const iframe = document.getElementById('product-iframe');
