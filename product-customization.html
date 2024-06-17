@@ -29,7 +29,11 @@
         </div>
         <div class="product-preview" id="product-preview"></div>
     </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pica/6.1.1/pica.min.js"></script>
     <script>
+        let currentImage = '';
+        let currentRotation = 0;
+
         window.addEventListener('message', function(event) {
             if (event.data.action === 'loadProduct') {
                 loadProduct(event.data.product);
@@ -37,7 +41,8 @@
         });
 
         function loadProduct(product) {
-            document.getElementById('product-preview').style.backgroundImage = `url(${product.src})`;
+            const previewArea = document.getElementById('product-preview');
+            previewArea.style.backgroundImage = `url(${product.src})`;
         }
 
         function uploadImage() {
@@ -45,10 +50,41 @@
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    addImageToPreview(e.target.result);
+                    currentImage = e.target.result;
+                    processImage(e.target.result);
                 };
                 reader.readAsDataURL(input.files[0]);
             }
+        }
+
+        async function processImage(imageSrc) {
+            const img = new Image();
+            img.src = imageSrc;
+            img.crossOrigin = "Anonymous";
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < imageData.data.length; i += 4) {
+                    const r = imageData.data[i];
+                    const g = imageData.data[i + 1];
+                    const b = imageData.data[i + 2];
+                    const avg = (r + g + b) / 3;
+                    imageData.data[i] = imageData.data[i + 1] = imageData.data[i + 2] = avg;
+                    imageData.data[i + 3] = avg < 50 ? 0 : 204; // Adjust transparency
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                const processedDataUrl = canvas.toDataURL('image/png');
+                addImageToPreview(processedDataUrl);
+            };
+            img.onerror = function () {
+                alert('Error loading the image. Please try another image.');
+            };
         }
 
         function addImageToPreview(imageSrc) {
@@ -62,7 +98,9 @@
             imgElement.style.transform = 'translate(-50%, -50%)';
             imgElement.style.maxWidth = '100%';
             imgElement.style.maxHeight = '100%';
+
             makeElementDraggable(imgElement);
+            addResizeHandles(imgElement);
             previewArea.appendChild(imgElement);
         }
 
@@ -85,6 +123,7 @@
             textElement.style.fontSize = size;
             textElement.style.color = color;
             textElement.style.whiteSpace = 'nowrap';
+
             makeElementDraggable(textElement);
             previewArea.appendChild(textElement);
         }
@@ -96,8 +135,9 @@
                 let shiftY = event.clientY - element.getBoundingClientRect().top;
 
                 function moveAt(pageX, pageY) {
-                    element.style.left = pageX - shiftX + 'px';
-                    element.style.top = pageY - shiftY + 'px';
+                    const previewArea = document.getElementById('product-preview');
+                    element.style.left = Math.max(0, Math.min(pageX - shiftX, previewArea.clientWidth - element.clientWidth)) + 'px';
+                    element.style.top = Math.max(0, Math.min(pageY - shiftY, previewArea.clientHeight - element.clientHeight)) + 'px';
                 }
 
                 function onMouseMove(event) {
@@ -117,6 +157,42 @@
             };
         }
 
+        function addResizeHandles(element) {
+            const resizer = document.createElement('div');
+            resizer.className = 'resizer';
+            resizer.style.right = '0';
+            resizer.style.bottom = '0';
+            resizer.style.cursor = 'se-resize';
+            resizer.addEventListener('mousedown', resizeMouseDown);
+            element.appendChild(resizer);
+        }
+
+        function resizeMouseDown(e) {
+            e.preventDefault();
+            const element = e.target.parentElement;
+            const previewArea = document.getElementById('product-preview');
+            let initialX = e.clientX;
+            let initialY = e.clientY;
+            let initialWidth = element.offsetWidth;
+            let initialHeight = element.offsetHeight;
+
+            function resizeMouseMove(e) {
+                e.preventDefault();
+                const dx = e.clientX - initialX;
+                const dy = e.clientY - initialY;
+                element.style.width = Math.max(20, Math.min(initialWidth + dx, previewArea.clientWidth - element.offsetLeft)) + 'px';
+                element.style.height = Math.max(20, Math.min(initialHeight + dy, previewArea.clientHeight - element.offsetTop)) + 'px';
+            }
+
+            function resizeMouseUp() {
+                document.removeEventListener('mousemove', resizeMouseMove);
+                document.removeEventListener('mouseup', resizeMouseUp);
+            }
+
+            document.addEventListener('mousemove', resizeMouseMove);
+            document.addEventListener('mouseup', resizeMouseUp);
+        }
+
         function saveDesign() {
             const previewArea = document.getElementById('product-preview');
             const canvas = document.createElement('canvas');
@@ -124,13 +200,11 @@
             canvas.width = previewArea.clientWidth;
             canvas.height = previewArea.clientHeight;
 
-            // Draw background
             const bgImage = new Image();
             bgImage.src = previewArea.style.backgroundImage.slice(5, -2);
             bgImage.onload = function() {
                 ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-                // Draw each element
                 const elements = previewArea.querySelectorAll('.custom-element');
                 elements.forEach(element => {
                     if (element.tagName.toLowerCase() === 'img') {
@@ -152,7 +226,6 @@
                     }
                 });
 
-                // Save canvas as image
                 const link = document.createElement('a');
                 link.download = 'design.png';
                 link.href = canvas.toDataURL();

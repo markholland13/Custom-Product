@@ -82,3 +82,15 @@ iframe {
 .custom-element {
     cursor: move;
 }
+
+.resizer {
+    width: 10px;
+    height: 10px;
+    background: #007bff;
+    position: absolute;
+    border: 1px solid #fff;
+    box-sizing: border-box;
+    cursor: se-resize;
+    bottom: 0;
+    right: 0;
+}
