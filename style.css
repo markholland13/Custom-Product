@@ -63,7 +63,7 @@ iframe {
     gap: 10px;
 }
 
-.control-panel input, .control-panel button {
+.control-panel input, .control-panel button, .control-panel select {
     padding: 10px;
     font-size: 1em;
 }
@@ -77,4 +77,8 @@ iframe {
     background-repeat: no-repeat;
     background-position: center;
     overflow: hidden;
+}
+
+.custom-element {
+    cursor: move;
 }
