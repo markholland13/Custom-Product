@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customize Product</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="customization-container">
+        <div class="control-panel">
+            <input type="file" id="image-upload" accept="image/*" onchange="uploadImage()">
+            <button onclick="addText()">Add Text</button>
+        </div>
+        <div class="product-preview" id="product-preview"></div>
+    </main>
+    <script>
+        window.addEventListener('message', function(event) {
+            if (event.data.action === 'loadProduct') {
+                loadProduct(event.data.product);
+            }
+        });
+
+        function loadProduct(product) {
+            document.getElementById('product-preview').style.backgroundImage = `url(${product.src})`;
+        }
+
+        function uploadImage() {
+            const input = document.getElementById('image-upload');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    addImageToPreview(e.target.result);
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function addImageToPreview(imageSrc) {
+            const previewArea = document.getElementById('product-preview');
+            previewArea.innerHTML = ''; // Clear previous customizations
+
+            const imgElement = document.createElement('img');
+            imgElement.src = imageSrc;
+            imgElement.className = 'custom-image';
+            imgElement.style.position = 'absolute';
+            imgElement.style.top = '50%';
+            imgElement.style.left = '50%';
+            imgElement.style.transform = 'translate(-50%, -50%)';
+            imgElement.style.maxWidth = '100%';
+            imgElement.style.maxHeight = '100%';
+
+            // Make image draggable
+            imgElement.onmousedown = function(event) {
+                let shiftX = event.clientX - imgElement.getBoundingClientRect().left;
+                let shiftY = event.clientY - imgElement.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    imgElement.style.left = pageX - shiftX + 'px';
+                    imgElement.style.top = pageY - shiftY + 'px';
+                }
+
+                function onMouseMove(event) {
+                    moveAt(event.pageX, event.pageY);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+
+                imgElement.onmouseup = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    imgElement.onmouseup = null;
+                };
+            };
+
+            imgElement.ondragstart = function() {
+                return false;
+            };
+
+            previewArea.appendChild(imgElement);
+        }
+
+        function addText() {
+            const text = prompt('Enter your text:');
+            if (!text) return;
+
+            const previewArea = document.getElementById('product-preview');
+
+            const textElement = document.createElement('div');
+            textElement.textContent = text;
+            textElement.className = 'custom-text';
+            textElement.style.position = 'absolute';
+            textElement.style.top = '50%';
+            textElement.style.left = '50%';
+            textElement.style.transform = 'translate(-50%, -50%)';
+            textElement.style.padding = '5px';
+            textElement.style.color = 'white';
+            textElement.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            textElement.style.fontSize = '16px';
+
+            // Make text draggable
+            textElement.onmousedown = function(event) {
+                let shiftX = event.clientX - textElement.getBoundingClientRect().left;
+                let shiftY = event.clientY - textElement.getBoundingClientRect().top;
+
+                function moveAt(pageX, pageY) {
+                    textElement.style.left = pageX - shiftX + 'px';
+                    textElement.style.top = pageY - shiftY + 'px';
+                }
+
+                function onMouseMove(event) {
+                    moveAt(event.pageX, event.pageY);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+
+                textElement.onmouseup = function() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    textElement.onmouseup = null;
+                };
+            };
+
+            textElement.ondragstart = function() {
+                return false;
+            };
+
+            previewArea.appendChild(textElement);
+        }
+    </script>
+</body>
+</html>

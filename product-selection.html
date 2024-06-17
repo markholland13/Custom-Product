@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Product</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="product-selection">
+        <div class="product" onclick="selectProduct('Product 1', 'https://example.com/product1.png')">
+            <img src="https://example.com/product1-thumb.png" alt="Product 1">
+            <h2>Product 1</h2>
+        </div>
+        <div class="product" onclick="selectProduct('Product 2', 'https://example.com/product2.png')">
+            <img src="https://example.com/product2-thumb.png" alt="Product 2">
+            <h2>Product 2</h2>
+        </div>
+        <!-- Add more products as needed -->
+    </main>
+    <script>
+        function selectProduct(name, src) {
+            window.parent.postMessage({
+                action: 'navigate',
+                page: 'product-customization.html',
+                product: { name, src }
+            }, '*');
+        }
+    </script>
+</body>
+</html>
